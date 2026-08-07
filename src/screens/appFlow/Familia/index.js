@@ -20,7 +20,7 @@ export default function Familia(props) {
 
     useEffect(() => {
         fetchFamilyProfiles()
-    }, [props?.route?.params?.item])
+    }, [props?.route?.params?.item, getFamilyProfile])
 
     function isDateMoreThan18YearsAgo(dateStr) {
         // Current date
@@ -78,7 +78,7 @@ export default function Familia(props) {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => props.navigation.navigate('Captura')} style={[styles.container, { borderColor: colors.redishColor }]}>
+                    <TouchableOpacity onPress={() => props.navigation.goBack()} style={[styles.container, { borderColor: colors.redishColor }]}>
                         <View style={[styles.rightView, { marginLeft: wp(2) }]}>
                             <Text style={{ fontSize: fontPixel(16), color: colors.redishColor, fontFamily: fontFamily.appTextBold }}>{'GUARDAR'}</Text>
                         </View>

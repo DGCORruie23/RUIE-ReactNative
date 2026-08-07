@@ -8,7 +8,7 @@ const DropDown = ({ country, dataArray, maintitle, label = "", placeholder, onSe
     const [expanded, setExpanded] = useState(false)
 
     return (
-        <View style={{ marginTop: heightPixel(10), zIndex: 1, }} >
+        <View style={{ marginTop: heightPixel(10), zIndex: 1000, elevation: 10 }} >
             {label && <Text style={styles.label} >{label}</Text>}
             <TouchableOpacity activeOpacity={0.7} onPress={() => { setExpanded(!expanded) }} style={[styles.mainContainer, { alignSelf: "center", width: maintitle == 'captura' ? '50%' : '80%' }]}>
                 {selected.icon}
@@ -20,7 +20,7 @@ const DropDown = ({ country, dataArray, maintitle, label = "", placeholder, onSe
             {
                 expanded ?
                     <View style={[styles.body, { width: country ? '80%' : '60%', }]} >
-                        <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: country ? heightPixel(250) : heightPixel(350) }} nestedScrollEnabled={true} >
+                        <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: country ? hp(35) : hp(55) }} nestedScrollEnabled={true} >
                             {
                                 dataArray.map((item, index) => {
                                     return (
@@ -80,7 +80,8 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-        elevation: 5,
+        elevation: 10,
+        zIndex: 100,
         padding: 16,
         borderRadius: wp(2)
     },

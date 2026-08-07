@@ -9,19 +9,12 @@ export default function CountryDropDown({ placeholder, country, onTypeValue, set
     const [countryArray, setCountryArray] = React.useState('')
     const [expanded, setExpanded] = React.useState(false)
 
-    const getCountries = async (e) => {
+    const getCountries = (e) => {
         const searchTerm = e.toLowerCase();
-        const getArray = await getCountry.filter((country) => country.nombre_pais.toLowerCase().includes(searchTerm));
+        const getArray = getCountry.filter((country) => country.nombre_pais.toLowerCase().includes(searchTerm));
         setCountryArray(getArray)
         setCountry('')
-
-        if (getArray.length > 0) {
-            // setCountry(e.toLowerCase())
-            onTypeValue(e.toLowerCase())
-        } else {
-            // setCountry('')
-            onTypeValue(e.toLowerCase())
-        }
+        onTypeValue(e)
     }
 
     return (
@@ -41,7 +34,7 @@ export default function CountryDropDown({ placeholder, country, onTypeValue, set
             {
                 (expanded && countryArray.length > 0) &&
                 <View style={styles.body} >
-                    <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: heightPixel(350) }} nestedScrollEnabled={true}>
+                    <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: hp(22) }} nestedScrollEnabled={true}>
                         {countryArray.length > 0 && countryArray.map((item, index) => {
                             return (
                                 <View key={index} style={{ marginVertical: heightPixel(6) }}>
@@ -70,7 +63,8 @@ const styles = StyleSheet.create({
         },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-        elevation: 5,
+        elevation: 10,
+        zIndex: 1000,
         padding: 16,
         width: '80%',
         borderRadius: wp(2)

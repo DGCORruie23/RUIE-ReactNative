@@ -23,20 +23,21 @@ export default function Nacionalidad(props) {
 
     useEffect(() => {
         getProfileAgainstCountry()
-    }, [country, props.route.params?.item])
+    }, [country, props.route.params?.item, getProfile])
 
     useFocusEffect(
         useCallback(() => {
             // Actions to perform when the screen is focused
             if (props.route.params?.item) {
                 setCountry(props.route.params?.item?.nacionalidad)
+                setTypeValue(props.route.params?.item?.nacionalidad)
             }
 
             return () => {
                 // Optional cleanup actions when the screen goes out of focus
                 console.log('Screen is unfocused');
             };
-        }, [])
+        }, [props.route.params?.item])
     );
 
     function isDateMoreThan18YearsAgo(dateStr) {
@@ -101,7 +102,7 @@ export default function Nacionalidad(props) {
                             <Text style={{ fontSize: fontPixel(16), color: colors.brownColor, fontFamily: fontFamily.appTextBold }}>{'PERSONA'}</Text>
                         </View>
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => props.navigation.navigate('Captura')} style={[styles.container, { borderColor: colors.redishColor }]}>
+                    <TouchableOpacity onPress={() => props.navigation.goBack()} style={[styles.container, { borderColor: colors.redishColor }]}>
                         <View style={[styles.rightView, { marginLeft: wp(2) }]}>
                             <Text style={{ fontSize: fontPixel(16), color: colors.redishColor, fontFamily: fontFamily.appTextBold }}>{'GUARDAR'}</Text>
                         </View>

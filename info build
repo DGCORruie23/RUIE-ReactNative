@@ -1,0 +1,12 @@
+Bash(npx @bam.tech/react-native-make --path ./logo-RUIe.png --platform all)
+● Bash(npx react-native set-icon --help)
+● Bash(npm install -D @bam.tech/react-native-make)
+● ManageTask(status task-100) (ctrl+o to expand)
+  .
+
+● Bash(npx react-native set-icon --path ./logo-RUIe.png)
+● Bash(sips -g pixelWidth -g pixelHeight /Users/dgcor/AppleProjects/RUIe_iOS_2026/logo-RUIe.png)
+● Bash(sips -p 1031 1031 logo-RUIe.png --out logo-RUIe-squared.png)
+● Bash(npx react-native set-icon --path ./logo-RUIe-squared.png)
+● Bash(git status) (ctrl+o to expand)
+

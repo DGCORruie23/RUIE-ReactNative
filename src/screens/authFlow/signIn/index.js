@@ -33,7 +33,10 @@ export default function SignIn(props) {
         } else {
           data.password = password
           dispatch(userData(data))
-          props.navigation.navigate(routes.tab)
+          props.navigation.reset({
+            index: 0,
+            routes: [{ name: routes.tab }],
+          });
         }
       })
       .catch(error => console.log("Login Error:-", error));

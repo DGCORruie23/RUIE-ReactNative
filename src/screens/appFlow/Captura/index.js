@@ -20,12 +20,11 @@ export default function Captura(props) {
   const preDefinedArray = [
     { id: 1, nombre_pais: 'Aeropuerto', icon: <Fontisto name='plane' color={colors.redishColor} size={25} /> },
     { id: 2, nombre_pais: 'Carretero', icon: <MaterialIcons name='add-road' color={colors.redishColor} size={25} /> },
-    { id: 3, nombre_pais: 'Disuadidos', icon: <Fontisto name='home' color={colors.redishColor} size={25} /> },
-    { id: 4, nombre_pais: 'Central de autobús', icon: <MaterialCommunityIcons name='van-passenger' color={colors.redishColor} size={25} /> },
-    { id: 5, nombre_pais: 'Ferroviario', icon: <MaterialCommunityIcons name='train' color={colors.redishColor} size={25} /> },
-    { id: 6, nombre_pais: 'Hotel', icon: <MaterialCommunityIcons name='office-building' color={colors.redishColor} size={25} /> },
-    { id: 7, nombre_pais: 'Puestos a Disposicion', icon: <MaterialCommunityIcons name='shield-star-outline' color={colors.redishColor} size={25} /> },
-    { id: 8, nombre_pais: 'Voluntarios', icon: <MaterialCommunityIcons name='human-male-male' color={colors.redishColor} size={25} /> },
+    { id: 3, nombre_pais: 'Central de autobús', icon: <MaterialCommunityIcons name='van-passenger' color={colors.redishColor} size={25} /> },
+    { id: 4, nombre_pais: 'Ferroviario', icon: <MaterialCommunityIcons name='train' color={colors.redishColor} size={25} /> },
+    { id: 5, nombre_pais: 'Hotel/A.V./C.S.', icon: <MaterialCommunityIcons name='office-building' color={colors.redishColor} size={25} /> },
+    { id: 6, nombre_pais: 'Puestos a Disposicion', icon: <MaterialCommunityIcons name='shield-star-outline' color={colors.redishColor} size={25} /> },
+    { id: 7, nombre_pais: 'Voluntarios', icon: <MaterialCommunityIcons name='human-male-male' color={colors.redishColor} size={25} /> },
   ]
 
   // Redux State 
@@ -60,7 +59,31 @@ export default function Captura(props) {
   // Select Set Get Data Array
   const setListOfDropDown = async () => {
     var carreteroObjects = [];
-    if (
+    if (selected.nombre_pais === 'Puestos a Disposicion') {
+      const fromFuerza = Fuerza.filter(
+        item =>
+          (item.tipoP.toLowerCase() === 'carretero' ||
+           item.tipoP.toLowerCase() === 'ferroviario' ||
+           item.tipoP.toLowerCase() === 'central de autobús') &&
+          item.oficinaR.toLowerCase() === uniqueOffices[user?.estado - 1].toLowerCase(),
+      ).map(item => ({
+        oficinaR: item.oficinaR,
+        number: item.numPunto,
+        suggestedName: item.nomPuntoRevision,
+      }));
+
+      const fromAirports = airportTypes.filter(
+        item =>
+          item.estadoPunto.toLowerCase() === uniqueOffices[user?.estado - 1].toLowerCase() &&
+          item.tipoPunto === 'AEREOS',
+      ).map(item => ({
+        oficinaR: item.estadoPunto,
+        number: 0,
+        suggestedName: item.nombrePunto,
+      }));
+
+      carreteroObjects = [...fromFuerza, ...fromAirports];
+    } else if (
       selected.nombre_pais === 'Carretero' ||
       selected.nombre_pais === 'Ferroviario' ||
       selected.nombre_pais === 'Central de autobús'
@@ -200,7 +223,7 @@ export default function Captura(props) {
       mainTopTitle: `OR: ${uniqueOffices[user?.estado - 1]}`,
       FetchDate: moment(new Date()).format('DD-MM-YYYY'),
       Total_Number: parseFloat(totalProfiles) + parseFloat(totalFamilyProfiles),
-      dropDownTitle: `${selected?.nombre_pais?.toUpperCase()}${(selected.nombre_pais !== 'Voluntarios') ? (selected.nombre_pais !== 'Puestos a Disposicion') ? (selectedValue != '' ? ':' + selectedValue : ':' + dropDownListOfFuerza[0]?.suggestedName) : '' : ''}`,
+      dropDownTitle: `${selected?.nombre_pais?.toUpperCase()}${(selected.nombre_pais !== 'Voluntarios') ? (selectedValue != '' ? ':' + selectedValue : ':' + dropDownListOfFuerza[0]?.suggestedName) : ''}`,
       selectedValue:
         selectedValue != ''
           ? selectedValue
@@ -394,7 +417,7 @@ export default function Captura(props) {
             <Text style={{ textAlign: 'center', fontSize: fontPixel(14), color: colors.black, fontFamily: fontFamily.appTextMedium }}>TIPO DE RESCATE</Text>
             <DropDown dataArray={preDefinedArray} maintitle='captura' onSelect={(e) => [setSelected(e), setTypeValue(''), setSelectedValue('')]} selected={selected} placeholder={'please select'} />
             {
-              (selected.nombre_pais !== 'Voluntarios') && (selected.nombre_pais !== 'Puestos a Disposicion') && <CustomDropDown dataArray={dropDownListOfFuerza} onTypeValue={(e) => setTypeValue(e)} onSelect={(e) => setSelectedValue(e)} selected={typeValue} />
+              (selected.nombre_pais !== 'Voluntarios') && <CustomDropDown dataArray={dropDownListOfFuerza} onTypeValue={(e) => setTypeValue(e)} onSelect={(e) => setSelectedValue(e)} selected={typeValue} />
             }
             <View style={{ marginTop: wp(10), zIndex: -1 }}>
               <Text style={{ fontSize: fontPixel(18), color: '#7A7A7A', fontFamily: fontFamily.appTextMedium, textAlign: 'center' }}>
@@ -450,7 +473,7 @@ export default function Captura(props) {
                 if (selectedValue != '') {
                   props.navigation.navigate(routes.nacionalidad);
                 } else {
-                  if ((selected.nombre_pais == 'Voluntarios') || (selected.nombre_pais == 'Puestos a Disposicion')) {
+                  if (selected.nombre_pais == 'Voluntarios') {
                     props.navigation.navigate(routes.nacionalidad)
                   } else {
                     Alert.alert('LLENAR PARA CONTINUAR')
@@ -538,7 +561,7 @@ export default function Captura(props) {
                 if (selectedValue != '') {
                   props.navigation.navigate(routes.Familia);
                 } else {
-                  if ((selected.nombre_pais == 'Voluntarios') || (selected.nombre_pais == 'Puestos a Disposicion')) {
+                  if (selected.nombre_pais == 'Voluntarios') {
                     props.navigation.navigate(routes.Familia)
                   } else {
                     Alert.alert('LLENAR PARA CONTINUAR')
@@ -566,7 +589,7 @@ export default function Captura(props) {
             if (selectedValue != '') {
               setConfirmModalVisible(!confirmModalVisible)
             } else {
-              if ((selected.nombre_pais == 'Voluntarios') || (selected.nombre_pais == 'Puestos a Disposicion')) {
+              if (selected.nombre_pais == 'Voluntarios') {
                 setConfirmModalVisible(!confirmModalVisible)
               } else {
                 Alert.alert('LLENAR PARA CONTINUAR')

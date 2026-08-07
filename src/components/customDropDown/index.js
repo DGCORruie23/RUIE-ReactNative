@@ -20,23 +20,16 @@ export default function CustomDropDown({ dataArray, onSelect, onTypeValue, selec
         };
     }, [expanded]);
 
-    const getArrayThings = async (e) => {
+    const getArrayThings = (e) => {
         const searchTerm = e.toLowerCase();
-        const getArray = await dataArray.filter(item => item.suggestedName.toLowerCase().includes(searchTerm));
+        const getArray = dataArray.filter(item => item.suggestedName.toLowerCase().includes(searchTerm));
         setThingsArray(getArray);
         onSelect('');
-
-        if (getArray.length > 0) {
-            // onSelect(e.toLowerCase());
-            onTypeValue(e.toLowerCase())
-        } else {
-            // onSelect('');
-            onTypeValue(e.toLowerCase())
-        }
+        onTypeValue(e);
     };
 
     return (
-        <View>
+        <View style={{ zIndex: 900, elevation: 9 }}>
             <TextInput
                 value={selected}
                 onChangeText={(e) => {
@@ -44,7 +37,8 @@ export default function CustomDropDown({ dataArray, onSelect, onTypeValue, selec
                     setExpanded(e.length > 0);
                 }}
                 placeholder='Punto de rescate'
-                style={{ textAlign: "center", alignSelf: "center", height: hp(5), width: wp(90), borderBottomWidth: 2, borderBottomColor: colors.green, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, }}
+                placeholderTextColor={colors.gray_txt}
+                style={{ textAlign: "center", alignSelf: "center", height: hp(5), width: wp(90), borderBottomWidth: 2, borderBottomColor: colors.green, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, color: colors.black }}
             />
             {
                 (expanded && thingArray.length > 0) &&

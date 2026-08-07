@@ -67,8 +67,11 @@ const Profile = (props) => {
             setMuje(props?.route?.params?.item?.sexo === 'Homebre' ? false : true)
             setEmbarazada(props?.route?.params?.item?.embarazo)
             const dateArray = props?.route?.params?.item?.edad
-            dateArray.length > 0 ? setShowInput(true) : null
-            setInputs([dateArray[8], dateArray[9], dateArray[5], dateArray[6], dateArray[0], dateArray[1], dateArray[2], dateArray[3]])
+            if (dateArray && dateArray.length > 0) {
+                setShowInput(false)
+                setHidePlaceholder(false)
+                setInputs([dateArray[8], dateArray[9], dateArray[5], dateArray[6], dateArray[0], dateArray[1], dateArray[2], dateArray[3]])
+            }
         }
     }, [props?.route?.params?.item])
 
@@ -93,9 +96,24 @@ const Profile = (props) => {
                 const month = index === 2 ? text + inputs[3] : inputs[2] + text;
                 if (parseInt(month, 10) > 12) return; // If month is invalid, stop execution
             } else if (index >= 4 && text) {
-                // Combine values to form the year and validate
-                const year = inputs.slice(4, 7).join('') + text; // Adjust based on your array structure
-                if (parseInt(year, 10) > new Date().getFullYear()) return; // If year is in the future, stop execution
+                const currentYear = new Date().getFullYear();
+                if (index === 4 && text !== '1' && text !== '2') {
+                    return;
+                }
+                if (index === 5) {
+                    const firstDigit = inputs[4];
+                    if (firstDigit === '1' && text !== '9') return;
+                    if (firstDigit === '2' && text !== '0') return;
+                }
+                if (index === 6) {
+                    const prefix = inputs[4] + inputs[5];
+                    if (prefix === '19' && parseInt(text, 10) < 2) return;
+                    if (prefix === '20' && parseInt(text, 10) > Math.floor((currentYear % 100) / 10)) return;
+                }
+                if (index === 7) {
+                    const yearVal = parseInt(inputs[4] + inputs[5] + inputs[6] + text, 10);
+                    if (yearVal < 1920 || yearVal > currentYear) return;
+                }
             }
 
             // Normal behavior for text input
@@ -121,8 +139,8 @@ const Profile = (props) => {
         const combinedNumber = parseInt(combinedString, 10);
 
         const monthNames = [
-            "Jan", "Feb", "Mar", "Apr", "May", "June",
-            "July", "Aug", "Sep", "Oct", "Nov", "Dec"
+            "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+            "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
         ];
         // Adjusting for array index starting at 0, month number starting at 1
         return monthNames[combinedNumber - 1];
@@ -162,7 +180,7 @@ const Profile = (props) => {
                 ? getFamilyProfile.length
                 : 0),
             'nacionalidad': country,
-            'iso3': country ? (getCountry.find(couny => couny.nombre_pais.toLowerCase() === country.toLowerCase())).iso3 : "",
+            'iso3': country ? (getCountry.find(couny => couny.nombre_pais.toLowerCase() === country.toLowerCase())?.iso3 || "") : "",
             'nombre': numbre,
             'apellidos': appellidos,
             'noIdentidad': "",
@@ -188,15 +206,7 @@ const Profile = (props) => {
                 } else {
                     dispatch(familiesProfileSave([Data]))
                 }
-                props.navigation.navigate(routes.Familia, {
-                    item: {
-                        Id: getFamilyProfile
-                            ? props?.route?.params?.id
-                                ? props?.route?.params?.id
-                                : props?.route?.params?.id == 0 ? props?.route?.params?.id : getFamilyProfile.length
-                            : 0
-                    }
-                })
+                props.navigation.goBack();
             } else {
                 if (getProfile != null) {
                     var newArray = [...getProfile]
@@ -210,7 +220,7 @@ const Profile = (props) => {
                 } else {
                     dispatch(profileSaved([Data]))
                 }
-                props.navigation.navigate(routes.nacionalidad, { item: { 'nacionalidad': country } })
+                props.navigation.goBack();
             }
 
             sendDataToServer()
@@ -297,7 +307,7 @@ const Profile = (props) => {
                     : "",
 
                 'nacionalidad': country,
-                'iso3': country ? (getCountry.find(couny => couny.nombre_pais.toLowerCase() === country.toLowerCase())).iso3 : "",
+                'iso3': country ? (getCountry.find(couny => couny.nombre_pais.toLowerCase() === country.toLowerCase())?.iso3 || "") : "",
                 'nombre': numbre,
                 'apellidos': appellidos,
                 'noIdentidad': "00",
@@ -321,6 +331,34 @@ const Profile = (props) => {
             console.log(error)
         }
     }
+
+    const deleteProfile = () => {
+        Alert.alert(
+            "Confirmar",
+            "¿Estás seguro de que deseas eliminar este registro?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                {
+                    text: "Eliminar",
+                    style: "destructive",
+                    onPress: () => {
+                        if (props?.route?.params?.key === 'Familia') {
+                            if (getFamilyProfile != null) {
+                                const newArray = getFamilyProfile.filter(i => i?.FamiliaId !== props?.route?.params?.item?.FamiliaId);
+                                dispatch(familiesProfileSave(newArray));
+                            }
+                        } else {
+                            if (getProfile != null) {
+                                const newArray = getProfile.filter(i => !(i?.id === props?.route?.params?.item?.id && i?.nacionalidad === props?.route?.params?.item?.nacionalidad));
+                                dispatch(profileSaved(newArray));
+                            }
+                        }
+                        props.navigation.goBack();
+                    }
+                }
+            ]
+        );
+    };
 
     return (
         <WrapperComponent background={colors.white}>
@@ -351,7 +389,7 @@ const Profile = (props) => {
                                 }}
                                 placeholderTextColor={colors.gray_txt}
                                 placeholder='Nombre(s):'
-                                style={{ height: hp(5), width: wp(80), borderBottomWidth: 2, borderBottomColor: colors.gray_txt, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, }} />
+                                style={{ height: hp(5), width: wp(80), borderBottomWidth: 2, borderBottomColor: colors.gray_txt, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, color: colors.black }} />
                         </View>
 
                         <View style={{ marginTop: hp(3) }}>
@@ -366,7 +404,7 @@ const Profile = (props) => {
                                 }}
                                 placeholderTextColor={colors.gray_txt}
                                 placeholder='Apellidos:'
-                                style={{ height: hp(5), width: wp(80), borderBottomWidth: 2, borderBottomColor: colors.gray_txt, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, }} />
+                                style={{ height: hp(5), width: wp(80), borderBottomWidth: 2, borderBottomColor: colors.gray_txt, fontSize: fontPixel(16), fontFamily: fontFamily.appTextMedium, color: colors.black }} />
                         </View>
 
                         <View style={[styles.container]}>
@@ -386,7 +424,7 @@ const Profile = (props) => {
                                                 <React.Fragment key={index}>
                                                     <TextInput
                                                         key={index}
-                                                        style={{ width: wp(4), height: hp(3), marginHorizontal: 5, paddingBottom: 5, borderBottomWidth: 3, borderBottomColor: inputs[index] ? colors.g : colors.gray_txt, fontSize: fontPixel(24), color: colors.grey_Text, fontFamily: fontFamily.appTextBold, textAlign: "center" }}
+                                                        style={{ width: wp(6), height: hp(5), padding: 0, marginHorizontal: 5, borderBottomWidth: 3, borderBottomColor: inputs[index] ? colors.g : colors.gray_txt, fontSize: fontPixel(20), color: colors.black, fontFamily: fontFamily.appTextBold, textAlign: "center" }}
                                                         onChangeText={(text) => handleTextChange(text, index)}
                                                         value={inputs[index]}
                                                         maxLength={1}
@@ -421,6 +459,7 @@ const Profile = (props) => {
                                             <CheckBox
                                                 boxType='square'
                                                 value={isChecked}
+                                                tintColors={{ true: colors.green, false: colors.gray_txt }}
                                                 onValueChange={() => {
                                                     setChecked(true)
                                                     setMuje(false)
@@ -436,6 +475,7 @@ const Profile = (props) => {
                                                 <CheckBox
                                                     boxType='square'
                                                     value={isMuje}
+                                                    tintColors={{ true: colors.green, false: colors.gray_txt }}
                                                     onValueChange={() => {
                                                         setMuje(true)
                                                         setChecked(false)
@@ -447,7 +487,7 @@ const Profile = (props) => {
                                             isMuje && (
                                                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                                                     <View style={{ transform: [{ scaleX: 0.7 }, { scaleY: 0.7 }], }}>
-                                                        <CheckBox boxType='square' value={isEmbarazada} onValueChange={() => setEmbarazada(!isEmbarazada)} />
+                                                        <CheckBox boxType='square' value={isEmbarazada} tintColors={{ true: colors.green, false: colors.gray_txt }} onValueChange={() => setEmbarazada(!isEmbarazada)} />
                                                     </View>
                                                     <Text style={[styles.checkText]}>Embarazada</Text>
                                                 </View>
@@ -456,14 +496,26 @@ const Profile = (props) => {
                                     </View>
                                 </View>
                             </View>
-                            <TouchableOpacity onPress={() => sendData()} style={[styles.buttoncontainer, { borderColor: colors.redishColor, marginTop: hp(1), }]}>
-                                <View style={[styles.rightView, { marginLeft: wp(2), marginRight: wp(2) }]}>
-                                    <Text style={{ fontSize: fontPixel(16), color: colors.redishColor, fontFamily: fontFamily.appTextBold }}>{'GUARDAR'}</Text>
-                                </View>
-                                <View style={[{ borderRadius: wp(5), backgroundColor: colors.redishColor, padding: 6 }]}>
-                                    <MaterialCommunityIcons name="content-save" size={30} color="#fff" />
-                                </View>
-                            </TouchableOpacity>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: wp(80), marginTop: hp(2), marginBottom: hp(2) }}>
+                                {props?.route?.params?.item && (
+                                    <TouchableOpacity onPress={deleteProfile} style={[styles.buttoncontainer, { borderColor: 'red' }]}>
+                                        <View style={[styles.rightView, { marginLeft: wp(2), marginRight: wp(2) }]}>
+                                            <Text style={{ fontSize: fontPixel(16), color: 'red', fontFamily: fontFamily.appTextBold }}>{'ELIMINAR'}</Text>
+                                        </View>
+                                        <View style={[{ borderRadius: wp(5), backgroundColor: 'red', padding: 6 }]}>
+                                            <MaterialCommunityIcons name="delete" size={30} color="#fff" />
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity onPress={() => sendData()} style={[styles.buttoncontainer, { borderColor: colors.redishColor, marginLeft: props?.route?.params?.item ? wp(5) : 0 }]}>
+                                    <View style={[styles.rightView, { marginLeft: wp(2), marginRight: wp(2) }]}>
+                                        <Text style={{ fontSize: fontPixel(16), color: colors.redishColor, fontFamily: fontFamily.appTextBold }}>{'GUARDAR'}</Text>
+                                    </View>
+                                    <View style={[{ borderRadius: wp(5), backgroundColor: colors.redishColor, padding: 6 }]}>
+                                        <MaterialCommunityIcons name="content-save" size={30} color="#fff" />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
                 </KeyboardAwareScrollView>

@@ -32,7 +32,10 @@ export default function Splash(props) {
       return () => clearTimeout(timer);
     } else {
       if (user) {
-        props.navigation.navigate(routes.tab);
+        props.navigation.reset({
+          index: 0,
+          routes: [{ name: routes.tab }],
+        });
       } else {
         props.navigation.navigate(routes.login);
       }

@@ -76,6 +76,7 @@ const PopupMenu = (props) => {
                                                 onCheckColor={colors.black}
                                                 boxType='square'
                                                 value={item.status}
+                                                tintColors={{ true: colors.brownishColor, false: colors.gray_txt }}
                                                 onValueChange={() => toggleCheckbox(item.id)}
                                             />
                                         </View>
