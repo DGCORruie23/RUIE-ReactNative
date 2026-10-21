@@ -2,23 +2,26 @@ import { Alert, Image, SafeAreaView, StyleSheet, View } from 'react-native'
 import React, { useEffect } from 'react'
 import WrapperComponent from '../../../components/wrapperComponent'
 import { appImages, colors, fontFamily } from '../../../services/utilities'
-import { endPoints, fontPixel, hp, routes, wp } from '../../../services/constants'
+import { endPoints, getEndPoints, fontPixel, hp, routes, wp } from '../../../services/constants'
 import Input from '../../../components/input'
 import Button from '../../../components/button'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view'
 import appStyles from '../../../services/utilities/appStyles'
 import { fetchApi } from '../../../apiCalling'
-import { useDispatch } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { userData } from '../../../redux/Slices/userDataSlice'
 
 export default function SignIn(props) {
   const dispatch = useDispatch()
+  const serverUrl = useSelector(state => state?.userData?.serverUrl)
+  const currentEndPoints = getEndPoints(serverUrl)
+
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [PasswordShow, setPasswordShow] = React.useState(true)
 
   const appLogin = async () => {
-    await fetchApi(endPoints.signIn, {
+    await fetchApi(currentEndPoints.signIn, {
       method: 'POST',
       body: {
         // "nickname": email.toLowerCase(),

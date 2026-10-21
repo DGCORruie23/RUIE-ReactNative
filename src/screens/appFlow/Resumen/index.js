@@ -148,7 +148,7 @@ export default function Resumen() {
                 <View style={styles.MainView}>
                   <Text style={[styles.mainTitle, { paddingVertical: 10, paddingLeft: 20 }]}>{item?.topTitle}</Text>
                   <Text style={styles.mainTitle}>{item?.mainTopTitle}</Text>
-                  <Text style={styles.shortDec}>FETCH: {item?.FetchDate}</Text>
+                  <Text style={styles.shortDec}>FECHA:: {item?.FetchDate}</Text>
                   <Text style={styles.shortDec}>Agente: {user?.nombre + " " + user?.apellido}</Text>
                   <Text style={[styles.mainTitle, { marginTop: hp(1) }]}>No: de Rescatados: {item?.Total_Number === 'null' ? '0' : item?.Total_Number}</Text>
                   <Text style={styles.shortDec}>{item?.dropDownTitle}</Text>

@@ -1,7 +1,7 @@
 import { StyleSheet, Text, SafeAreaView, View, TextInput, TouchableOpacity, Alert } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import WrapperComponent from '../../../components/wrapperComponent'
-import { colors, endPoints, fontFamily, fontPixel, hp, routes, wp } from '../../../services'
+import { colors, endPoints, getEndPoints, fontFamily, fontPixel, hp, routes, wp } from '../../../services'
 import Entypo from 'react-native-vector-icons/Entypo';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons'
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -23,6 +23,8 @@ export default function GUARDAR(props) {
     const forwardData = useSelector(state => state.userData.forwardData)
     const puestisADisposicion = useSelector(state => state.userData.puestisADisposicion)
     const InsertCData = useSelector(state => state.userData.InsertCData)
+    const serverUrl = useSelector(state => state?.userData?.serverUrl)
+    const currentEndPoints = getEndPoints(serverUrl)
 
     // Get unique oficinaR Value from GET Fuerza API
     const uniqueOffices = [...new Set(Municipios.map(item => item.estado))];
@@ -126,22 +128,22 @@ export default function GUARDAR(props) {
                 'nombreAgente': user?.nombre?.toUpperCase() + " " + user?.apellido?.toUpperCase(),
 
                 'aeropuerto': forwardData?.DropDownSelected == 'Aeropuerto' ? true : false,
-                'carretero': forwardData?.DropDownSelected == 'Carretero' ? true : false,
+                'carretero': (forwardData?.DropDownSelected == 'Carretero' || forwardData?.DropDownSelected == 'Caravana') ? true : false,
                 'tipoVehic': "",
                 'lineaAutobus': "",
-                'numeroEcono': "",
+                'numeroEcono': forwardData?.DropDownSelected == 'Caravana' ? (forwardData?.caravanaName || "").substring(0, 49) : "",
                 'placas': "",
 
-                'vehiculoAseg': false,
-                'casaSeguridad': forwardData?.DropDownSelected == 'Casa De Seguridad' ? true : false,
-                'centralAutobus': forwardData?.DropDownSelected == 'Central De AutoBuses' ? true : false,
+                'vehiculoAseg': forwardData?.DropDownSelected == 'Caravana' ? true : false,
+                'casaSeguridad': forwardData?.DropDownSelected == 'Disuadidos' ? true : false,
+                'centralAutobus': forwardData?.DropDownSelected == 'Central de autobús' ? true : false,
 
-                'ferrocarril': forwardData?.DropDownSelected == 'Ferrocarril' ? true : false,
+                'ferrocarril': forwardData?.DropDownSelected == 'Ferroviario' ? true : false,
                 'empresa': "",
                 'compartimento': "",
                 'concesionario': "",
 
-                'hotel': forwardData?.DropDownSelected == 'Hotel' ? true : false,
+                'hotel': forwardData?.DropDownSelected == 'Hotel/A.V./C.S.' ? true : false,
                 'nombreHotel': "",
 
                 'puestosADispo': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? true : false,
@@ -162,16 +164,18 @@ export default function GUARDAR(props) {
                 'numPresuntosDelincuentes': 0,
 
                 'municipio': (
-                    forwardData?.DropDownSelected == 'Casa De Seguridad' ||
-                    forwardData?.DropDownSelected == 'Hotel'
+                    forwardData?.DropDownSelected == 'Hotel/A.V./C.S.'
                 )
                     ? forwardData?.customeInputSelection
                     : "",
                 'puntoEstra': (
                     forwardData?.DropDownSelected == 'Aeropuerto' ||
-                    forwardData?.DropDownSelected == 'Central De AutoBuses' ||
+                    forwardData?.DropDownSelected == 'Central de autobús' ||
                     forwardData?.DropDownSelected == 'Carretero' ||
-                    forwardData?.DropDownSelected == 'Ferrocarril'
+                    forwardData?.DropDownSelected == 'Ferroviario' ||
+                    forwardData?.DropDownSelected == 'Puestos a Disposicion' ||
+                    forwardData?.DropDownSelected == 'Voluntarios' ||
+                    forwardData?.DropDownSelected == 'Caravana'
                 )
                     ? forwardData?.customeInputSelection
                     : "",
@@ -209,7 +213,7 @@ export default function GUARDAR(props) {
                             redirect: 'follow'
                         };
 
-                        fetch(`${endPoints.InsertC}`, requestOptions)
+                        fetch(`${currentEndPoints.InsertC}`, requestOptions)
                             .then(response => response.json())
                             .then(result => console.log("result", result))
                             .catch(error => console.log('error', error));

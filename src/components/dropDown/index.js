@@ -20,7 +20,7 @@ const DropDown = ({ country, dataArray, maintitle, label = "", placeholder, onSe
             {
                 expanded ?
                     <View style={[styles.body, { width: country ? '80%' : '60%', }]} >
-                        <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: country ? hp(35) : hp(55) }} nestedScrollEnabled={true} >
+                        <ScrollView showsVerticalScrollIndicator={true} style={{ maxHeight: country ? hp(35) : hp(70) }} nestedScrollEnabled={true} >
                             {
                                 dataArray.map((item, index) => {
                                     return (
@@ -69,8 +69,6 @@ const styles = StyleSheet.create({
         marginBottom: heightPixel(8)
     },
     body: {
-        position: 'absolute',
-        top: hp(5),
         backgroundColor: colors.white,
         alignSelf: "center",
         shadowColor: "#000",
@@ -83,7 +81,8 @@ const styles = StyleSheet.create({
         elevation: 10,
         zIndex: 100,
         padding: 16,
-        borderRadius: wp(2)
+        borderRadius: wp(2),
+        marginTop: 5,
     },
     bodyItem: {
         fontSize: fontPixel(16),

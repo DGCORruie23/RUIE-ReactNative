@@ -1,26 +1,37 @@
-import { Image, SafeAreaView, StyleSheet, Text, View, AppState } from 'react-native'
+import { Image, SafeAreaView, StyleSheet, Text, View, AppState, Modal } from 'react-native'
 import React, { useState, useEffect } from 'react'
 import { appImages, colors, fontFamily } from '../../../services/utilities'
 import WrapperComponent from '../../../components/wrapperComponent'
-import { endPoints, fontPixel, hp, routes, wp } from '../../../services/constants'
+import { getEndPoints, fontPixel, hp, routes, wp } from '../../../services/constants'
 import { fetchApi } from '../../../apiCalling'
 import { useDispatch, useSelector } from 'react-redux'
 import { userData } from '../../../redux/Slices/userDataSlice'
-import { getAirportTypes, getFuerza, getMunicipios, getPaises, SaveInsertCData, SaveInsertRData, SaveResumenData } from '../../../redux/Slices/userDataSlice'
+import { getAirportTypes, getFuerza, getMunicipios, getPaises, SaveInsertCData, SaveInsertRData, SaveServerUrl } from '../../../redux/Slices/userDataSlice'
 import NetInfo from "@react-native-community/netinfo";
 import BackgroundFetch from "react-native-background-fetch";
+import DeviceInfo from 'react-native-device-info';
+import { fetchServerConfig, isVersionOutdated, shouldRefreshServerConfig } from '../../../services/serverConfig';
 
 export default function Splash(props) {
   const dispatch = useDispatch()
   const user = useSelector(state => state?.userData?.userData)
   const InsertRData = useSelector(state => state.userData.InsertRData)
   const InsertCData = useSelector(state => state.userData.InsertCData)
+  const serverUrl = useSelector(state => state?.userData?.serverUrl)
+  const serverUrlCheckedAt = useSelector(state => state?.userData?.serverUrlCheckedAt)
 
   const [progress, setProgress] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [isOutdated, setIsOutdated] = useState(false);
+  const [outdatedInfo, setOutdatedInfo] = useState({ currentVersion: '', minVersion: '', message: '' });
+
+  // Obtenemos los endpoints usando la URL del servidor actual (o fallback si no hay)
+  const currentEndPoints = getEndPoints(serverUrl);
 
   // Loading Progress Bar
   useEffect(() => {
+    if (isOutdated) return; // Bloquear avance si la app está desactualizada
+
     if (progress < 100) {
       const timer = setTimeout(() => {
         const nextProgress = progress + 20;
@@ -33,7 +44,6 @@ export default function Splash(props) {
     } else {
       if (user) {
         props.navigation.reset({
-          index: 0,
           routes: [{ name: routes.tab }],
         });
       } else {
@@ -41,12 +51,63 @@ export default function Splash(props) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progress, user, props.navigation]);
+  }, [progress, user, props.navigation, isOutdated]);
 
-  // Check the initial network state
+  // Validar versión y URL dinámica con validacionL
+  const validateServerAndVersion = async () => {
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        console.log('Sin conexión para validacionL, usando serverUrl guardado:', serverUrl);
+        return;
+      }
+
+      // Solo consultar si nunca se hizo o pasaron 4+ horas
+      if (!shouldRefreshServerConfig(serverUrlCheckedAt)) {
+        console.log('validacionL verificado recientemente, omitiendo consulta.');
+        return;
+      }
+
+      const config = await fetchServerConfig();
+      console.log('Configuración recibida de validacionL:', config);
+
+      // Guardar URL y timestamp en Redux
+      dispatch(SaveServerUrl({
+        url: config.url,
+        checkedAt: new Date().toISOString(),
+      }));
+
+      // Verificar versión de la app
+      let currentAppVersion = '1.0.28';
+      try {
+        if (DeviceInfo?.getVersion) {
+          currentAppVersion = DeviceInfo.getVersion();
+        }
+      } catch (err) {
+        console.log('Error obteniendo versión de DeviceInfo:', err);
+      }
+
+      const outdated = isVersionOutdated(currentAppVersion, config.versionMinima);
+      if (outdated) {
+        setIsOutdated(true);
+        setOutdatedInfo({
+          currentVersion: currentAppVersion,
+          minVersion: config.versionMinima,
+          message: config.mensaje || 'Existe una versión más reciente obligatoria.',
+        });
+      }
+    } catch (error) {
+      console.log('Error al validar servidor/versión:', error);
+    }
+  };
+
+  // Check the initial network state y validar servidor
   useEffect(() => {
     NetInfo.fetch().then(state => {
       setIsConnected(state.isConnected);
+      if (state.isConnected) {
+        validateServerAndVersion();
+      }
     });
 
     const unsubscribe = NetInfo.addEventListener(state => {
@@ -57,11 +118,14 @@ export default function Splash(props) {
     return () => {
       unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // If Internet Connection is True
   useEffect(() => {
     if (isConnected) {
+      validateServerAndVersion();
+
       // Post Profile API
       if (InsertRData != null) {
         PostInsertRData();
@@ -89,7 +153,10 @@ export default function Splash(props) {
     var myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
 
-    var raw = JSON.stringify(InsertRData);
+    const cleanData = Array.isArray(InsertRData)
+      ? InsertRData.map(({ recordId, ...rest }) => rest)
+      : InsertRData;
+    var raw = JSON.stringify(cleanData);
 
     var requestOptions = {
       method: 'POST',
@@ -98,7 +165,7 @@ export default function Splash(props) {
       redirect: 'follow'
     };
 
-    await fetch(`${endPoints.InsertR}`, requestOptions)
+    await fetch(`${currentEndPoints.InsertR}`, requestOptions)
       .then(response => response.json())
       .then(result => {
         console.log("result", result)
@@ -110,7 +177,8 @@ export default function Splash(props) {
   }
 
   const fetchUserValidate = async () => {
-    await fetchApi(endPoints.signIn, {
+    if (!user?.nickname) return;
+    await fetchApi(currentEndPoints.signIn, {
       method: 'POST',
       body: {
         // "nickname": email.toLowerCase(),
@@ -145,7 +213,7 @@ export default function Splash(props) {
       redirect: 'follow'
     };
 
-    await fetch(`${endPoints.InsertC}`, requestOptions)
+    await fetch(`${currentEndPoints.InsertC}`, requestOptions)
       .then(response => response.json())
       .then(result => {
         console.log("result", result)
@@ -156,10 +224,8 @@ export default function Splash(props) {
       .catch(error => console.log('error', error));
   }
 
-  
-
   const fetchAirportType = async () => {
-    await fetchApi(endPoints.airportTypes)
+    await fetchApi(currentEndPoints.airportTypes)
       .then(data => {
         console.log('airportTypes:- ', data);
         dispatch(getAirportTypes(data));
@@ -168,7 +234,7 @@ export default function Splash(props) {
   };
 
   const fetchMunicipios = async () => {
-    await fetchApi(endPoints.Municipios)
+    await fetchApi(currentEndPoints.Municipios)
       .then(data => {
         console.log('Municipios:- ', data);
         dispatch(getMunicipios(data));
@@ -177,7 +243,7 @@ export default function Splash(props) {
   };
 
   const fetchFuerza = async () => {
-    await fetchApi(endPoints.Fuerza)
+    await fetchApi(currentEndPoints.Fuerza)
       .then(data => {
         console.log('Fuerza:- ', data);
         dispatch(getFuerza(data));
@@ -186,7 +252,7 @@ export default function Splash(props) {
   };
 
   const fetchPaises = async () => {
-    await fetchApi(endPoints.Paises)
+    await fetchApi(currentEndPoints.Paises)
       .then(data => {
         console.log('Paises:- ', data);
         dispatch(getPaises(data));
@@ -301,7 +367,7 @@ export default function Splash(props) {
           style={{ height: hp(30), width: wp(45), marginTop: hp(10) }}
         />
 
-        <Text
+        {/* <Text
           style={[
             styles.mainDescription,
             {
@@ -312,7 +378,7 @@ export default function Splash(props) {
             },
           ]}>
           Dirección General de Control y Verificación Migratoria
-        </Text>
+        </Text> */}
 
         <Text
           style={[
@@ -339,6 +405,36 @@ export default function Splash(props) {
           </View>
           <Text style={styles.percentageText}>{progress}%</Text>
         </View>
+
+        {/* Modal de Actualización Obligatoria */}
+        <Modal
+          animationType="fade"
+          transparent={true}
+          visible={isOutdated}
+          onRequestClose={() => {}}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Actualización Requerida</Text>
+              <Text style={styles.modalSubtitle}>
+                {outdatedInfo.message || 'Tu aplicación se encuentra desactualizada.'}
+              </Text>
+
+              <View style={styles.versionBox}>
+                <Text style={styles.versionText}>
+                  Tu versión: <Text style={styles.versionValue}>{outdatedInfo.currentVersion}</Text>
+                </Text>
+                <Text style={styles.versionText}>
+                  Versión mínima requerida: <Text style={styles.versionValue}>{outdatedInfo.minVersion}</Text>
+                </Text>
+              </View>
+
+              <Text style={styles.modalWarning}>
+                Para continuar utilizando el sistema RUI electrónico es necesario actualizar la aplicación.
+              </Text>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </WrapperComponent>
   );
@@ -380,5 +476,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: fontFamily.appTextMedium,
     fontSize: fontPixel(12),
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: wp(6),
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: wp(4),
+    padding: wp(6),
+    width: '90%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: fontPixel(20),
+    fontFamily: fontFamily.appTextBold,
+    color: colors.redishColor,
+    marginBottom: hp(1.5),
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: fontPixel(14),
+    fontFamily: fontFamily.appTextMedium,
+    color: colors.black,
+    textAlign: 'center',
+    marginBottom: hp(2),
+  },
+  versionBox: {
+    backgroundColor: '#F5F5F5',
+    padding: wp(3),
+    borderRadius: wp(2),
+    width: '100%',
+    marginBottom: hp(2),
+  },
+  versionText: {
+    fontSize: fontPixel(13),
+    fontFamily: fontFamily.appTextRegular,
+    color: colors.grey_Text,
+    marginVertical: 2,
+    textAlign: 'center',
+  },
+  versionValue: {
+    fontFamily: fontFamily.appTextBold,
+    color: colors.black,
+  },
+  modalWarning: {
+    fontSize: fontPixel(12),
+    fontFamily: fontFamily.appTextMedium,
+    color: colors.redishColor,
+    textAlign: 'center',
   },
 });

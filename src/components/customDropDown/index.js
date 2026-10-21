@@ -7,6 +7,10 @@ export default function CustomDropDown({ dataArray, onSelect, onTypeValue, selec
     const [expanded, setExpanded] = React.useState(false);
 
     useEffect(() => {
+        setThingsArray(dataArray || []);
+    }, [dataArray]);
+
+    useEffect(() => {
         const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
             if (expanded) {
                 setExpanded(false);
@@ -32,6 +36,10 @@ export default function CustomDropDown({ dataArray, onSelect, onTypeValue, selec
         <View style={{ zIndex: 900, elevation: 9 }}>
             <TextInput
                 value={selected}
+                onFocus={() => {
+                    setThingsArray(dataArray);
+                    setExpanded(true);
+                }}
                 onChangeText={(e) => {
                     getArrayThings(e);
                     setExpanded(e.length > 0);
@@ -58,10 +66,8 @@ export default function CustomDropDown({ dataArray, onSelect, onTypeValue, selec
 
 const styles = StyleSheet.create({
     body: {
-        position: 'absolute',
-        top: hp(5),
         backgroundColor: colors.white,
-        width: "99%",
+        width: "90%",
         alignSelf: "center",
         shadowColor: "#000",
         shadowOffset: {
@@ -72,8 +78,8 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
         elevation: 5,
         padding: 16,
-        width: '80%',
         borderRadius: wp(2),
+        marginTop: 5,
     },
     bodyItem: {
         fontSize: fontPixel(16),

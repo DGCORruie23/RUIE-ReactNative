@@ -165,26 +165,37 @@ const Profile = (props) => {
     const isEmptyInputs = isEmpty(inputs);
 
     const sendData = async () => {
+        const isFamily = props?.route?.params?.key == 'Familia';
+        const assignedId = isFamily
+            ? (props?.route?.params?.id !== undefined
+                ? props?.route?.params?.id
+                : (getFamilyProfile && getFamilyProfile.length > 0 ? getFamilyProfile.length : 0))
+            : (props?.route?.params?.item?.id !== undefined
+                ? props?.route?.params?.item?.id
+                : (getProfile && getProfile.length > 0
+                    ? Math.max(...getProfile.map(item => Number(item?.id) || 0)) + 1
+                    : 0));
+
+        const assignedFamiliaId = isFamily
+            ? (props?.route?.params?.item?.FamiliaId !== undefined
+                ? props?.route?.params?.item?.FamiliaId
+                : (getFamilyProfile && getFamilyProfile.length > 0
+                    ? Math.max(...getFamilyProfile.map(item => Number(item?.FamiliaId) || 0)) + 1
+                    : 0))
+            : 0;
+
+        const recordId = props?.route?.params?.item?.recordId || (isFamily ? `fam_${assignedFamiliaId}` : `ind_${assignedId}`);
+
         const Data = {
-            id:
-                props?.route?.params?.key == 'Familia'
-                    ? (getFamilyProfile
-                        ? props?.route?.params?.id
-                            ? props?.route?.params?.id
-                            : props?.route?.params?.id == 0 ? props?.route?.params?.id : getFamilyProfile.length
-                        : 0)
-                    : (getProfile
-                        ? getProfile.length
-                        : 0),
-            FamiliaId: (getFamilyProfile
-                ? getFamilyProfile.length
-                : 0),
+            recordId,
+            id: assignedId,
+            FamiliaId: assignedFamiliaId,
             'nacionalidad': country,
             'iso3': country ? (getCountry.find(couny => couny.nombre_pais.toLowerCase() === country.toLowerCase())?.iso3 || "") : "",
             'nombre': numbre,
             'apellidos': appellidos,
             'noIdentidad': "",
-            'parentesco': props?.route?.params?.key == 'Familia' ? dropDownCountry?.nombre_pais : "",
+            'parentesco': isFamily ? dropDownCountry?.nombre_pais : "",
             'fechaNacimiento': inputs[4] + inputs[5] + inputs[6] + inputs[7] + '-' + inputs[2] + inputs[3] + '-' + inputs[0] + inputs[1],
             'sexo': isChecked ? 'Homebre' : 'Mujer',
             'embarazo': isEmbarazada,
@@ -193,7 +204,7 @@ const Profile = (props) => {
         }
 
         if (country && numbre != "" && appellidos != "" && !isEmptyInputs && (isChecked || isMuje)) {
-            if (props?.route?.params?.key == 'Familia') {
+            if (isFamily) {
                 if (getFamilyProfile != null) {
                     var newAFamilyrray = [...getFamilyProfile]
                     const getId = newAFamilyrray.findIndex(i => i?.FamiliaId == props?.route?.params?.item?.FamiliaId)
@@ -210,7 +221,12 @@ const Profile = (props) => {
             } else {
                 if (getProfile != null) {
                     var newArray = [...getProfile]
-                    const getId = newArray.findIndex(i => i?.id == props?.route?.params?.item?.id && (i?.nacionalidad == props?.route?.params?.item?.nacionalidad))
+                    const getId = newArray.findIndex(i =>
+                        props?.route?.params?.item && (
+                            (i?.recordId && i?.recordId === props?.route?.params?.item?.recordId) ||
+                            (i?.id == props?.route?.params?.item?.id && i?.nacionalidad == props?.route?.params?.item?.nacionalidad)
+                        )
+                    )
                     if (getId !== -1) {
                         newArray[getId] = Data;
                     } else {
@@ -223,7 +239,7 @@ const Profile = (props) => {
                 props.navigation.goBack();
             }
 
-            sendDataToServer()
+            sendDataToServer(Data)
         } else {
             Alert.alert('Datos incorrectos')
         }
@@ -231,7 +247,7 @@ const Profile = (props) => {
     }
 
     // Data send to Server
-    const sendDataToServer = async () => {
+    const sendDataToServer = async (savedData) => {
         try {
             var fechaN = '' + inputs[0] + inputs[1] + '/' + inputs[2] + inputs[3] + '/' + inputs[4] + inputs[5] + inputs[6] + inputs[7]
 
@@ -252,38 +268,39 @@ const Profile = (props) => {
 
             console.log("edad ", infof)
             const dataObject = {
+                "recordId": savedData?.recordId,
                 "oficinaRepre": uniqueOffices[user?.estado - 1],
                 "fecha": moment(new Date()).format('DD-MM-YY'),
                 'hora': moment(new Date()).format('HH:mm'),
                 'nombreAgente': user?.nombre?.toUpperCase() + " " + user?.apellido?.toUpperCase(),
 
                 'aeropuerto': forwardData?.DropDownSelected == 'Aeropuerto' ? true : false,
-                'carretero': forwardData?.DropDownSelected == 'Carretero' ? true : false,
+                'carretero': (forwardData?.DropDownSelected == 'Carretero' || forwardData?.DropDownSelected == 'Caravana') ? true : false,
                 'tipoVehic': "",
                 'lineaAutobus': "",
-                'numeroEcono': "",
+                'numeroEcono': forwardData?.DropDownSelected == 'Caravana' ? (forwardData?.caravanaName || "").substring(0, 49) : "",
                 'placas': "",
 
-                'vehiculoAseg': false,
+                'vehiculoAseg': forwardData?.DropDownSelected == 'Caravana' ? true : false,
                 'casaSeguridad': forwardData?.DropDownSelected == 'Disuadidos' ? true : false,
-                'centralAutobus': forwardData?.DropDownSelected == 'Central De AutoBuses' ? true : false,
+                'centralAutobus': forwardData?.DropDownSelected == 'Central de autobús' ? true : false,
 
-                'ferrocarril': forwardData?.DropDownSelected == 'Ferrocarril' ? true : false,
+                'ferrocarril': forwardData?.DropDownSelected == 'Ferroviario' ? true : false,
                 'empresa': "",
 
-                'hotel': forwardData?.DropDownSelected == 'Hotel' ? true : false,
+                'hotel': forwardData?.DropDownSelected == 'Hotel/A.V./C.S.' ? true : false,
                 'nombreHotel': "",
 
                 'puestosADispo': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? true : false,
-                'juezCalif': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Juez Calificador')[0]?.status : false,
-                'reclusorio': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Reclusorio / Cereso')[0]?.status : false,
-                'policiaFede': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Policia Federal')[0]?.status : false,
-                'dif': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'DIF')[0]?.status : false,
-                'policiaEsta': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Policia Estatal')[0]?.status : false,
-                'policiaMuni': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Policia Municipal')[0]?.status : false,
-                'guardiaNaci': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Guardia Nacional')[0]?.status : false,
-                'fiscalia': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Fiscalia')[0]?.status : false,
-                'otrasAuto': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion.filter(item => item.id == 'Otras autoridades')[0]?.status : false,
+                'juezCalif': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Juez Calificador')[0]?.status : false,
+                'reclusorio': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Reclusorio / Cereso')[0]?.status : false,
+                'policiaFede': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Policia Federal')[0]?.status : false,
+                'dif': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'DIF')[0]?.status : false,
+                'policiaEsta': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Policia Estatal')[0]?.status : false,
+                'policiaMuni': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Policia Municipal')[0]?.status : false,
+                'guardiaNaci': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Guardia Nacional')[0]?.status : false,
+                'fiscalia': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Fiscalia')[0]?.status : false,
+                'otrasAuto': forwardData?.DropDownSelected == 'Puestos a Disposicion' ? puestisADisposicion?.filter(item => item.id == 'Otras autoridades')[0]?.status : false,
 
                 'voluntarios': forwardData?.DropDownSelected == 'Voluntarios' ? true : false,
                 'otro': false,
@@ -292,16 +309,18 @@ const Profile = (props) => {
                 'numPresuntosDelincuentes': 0,
 
                 'municipio': (
-                    forwardData?.DropDownSelected == 'Casa De Seguridad' ||
-                    forwardData?.DropDownSelected == 'Hotel'
+                    forwardData?.DropDownSelected == 'Hotel/A.V./C.S.'
                 )
                     ? forwardData?.customeInputSelection
                     : "",
                 'puntoEstra': (
                     forwardData?.DropDownSelected == 'Aeropuerto' ||
-                    forwardData?.DropDownSelected == 'Central De AutoBuses' ||
+                    forwardData?.DropDownSelected == 'Central de autobús' ||
                     forwardData?.DropDownSelected == 'Carretero' ||
-                    forwardData?.DropDownSelected == 'Ferrocarril'
+                    forwardData?.DropDownSelected == 'Ferroviario' ||
+                    forwardData?.DropDownSelected == 'Puestos a Disposicion' ||
+                    forwardData?.DropDownSelected == 'Voluntarios' ||
+                    forwardData?.DropDownSelected == 'Caravana'
                 )
                     ? forwardData?.customeInputSelection
                     : "",
@@ -322,7 +341,18 @@ const Profile = (props) => {
 
             if (InsertRData != null) {
                 let newArray = [...InsertRData]
-                newArray.push(dataObject)
+                const oldItem = props?.route?.params?.item;
+                const existingIndex = oldItem
+                    ? newArray.findIndex(r =>
+                        (savedData?.recordId && r?.recordId === savedData.recordId) ||
+                        (r?.nombre === oldItem?.nombre && r?.apellidos === oldItem?.apellidos && r?.nacionalidad === oldItem?.nacionalidad)
+                    )
+                    : -1;
+                if (existingIndex !== -1) {
+                    newArray[existingIndex] = dataObject;
+                } else {
+                    newArray.push(dataObject);
+                }
                 dispatch(SaveInsertRData(newArray))
             } else {
                 dispatch(SaveInsertRData([dataObject]))
@@ -342,17 +372,40 @@ const Profile = (props) => {
                     text: "Eliminar",
                     style: "destructive",
                     onPress: () => {
-                        if (props?.route?.params?.key === 'Familia') {
+                        const targetItem = props?.route?.params?.item;
+                        const isFamily = props?.route?.params?.key === 'Familia';
+                        const targetRecordId = targetItem?.recordId || (isFamily ? `fam_${targetItem?.FamiliaId}` : `ind_${targetItem?.id}`);
+
+                        if (isFamily) {
                             if (getFamilyProfile != null) {
-                                const newArray = getFamilyProfile.filter(i => i?.FamiliaId !== props?.route?.params?.item?.FamiliaId);
-                                dispatch(familiesProfileSave(newArray));
+                                const newArray = getFamilyProfile.filter(i => i?.FamiliaId !== targetItem?.FamiliaId);
+                                dispatch(familiesProfileSave(newArray.length > 0 ? newArray : null));
                             }
                         } else {
                             if (getProfile != null) {
-                                const newArray = getProfile.filter(i => !(i?.id === props?.route?.params?.item?.id && i?.nacionalidad === props?.route?.params?.item?.nacionalidad));
-                                dispatch(profileSaved(newArray));
+                                const newArray = getProfile.filter(i => !(
+                                    (i?.recordId && i?.recordId === targetRecordId) ||
+                                    (i?.id === targetItem?.id && i?.nacionalidad === targetItem?.nacionalidad)
+                                ));
+                                dispatch(profileSaved(newArray.length > 0 ? newArray : null));
                             }
                         }
+
+                        if (InsertRData != null && targetItem) {
+                            let matched = false;
+                            const updatedInsertR = InsertRData.filter(r => {
+                                if (matched) return true;
+                                const isMatch = (r?.recordId && r.recordId === targetRecordId) ||
+                                    (!r?.recordId && r?.nombre === targetItem?.nombre && r?.apellidos === targetItem?.apellidos && r?.nacionalidad === targetItem?.nacionalidad);
+                                if (isMatch) {
+                                    matched = true;
+                                    return false;
+                                }
+                                return true;
+                            });
+                            dispatch(SaveInsertRData(updatedInsertR.length > 0 ? updatedInsertR : null));
+                        }
+
                         props.navigation.goBack();
                     }
                 }

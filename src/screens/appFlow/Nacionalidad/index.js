@@ -17,6 +17,10 @@ export default function Nacionalidad(props) {
     const [allprofile, setAllProfile] = useState(getProfile ? getProfile : [])
 
     const getProfileAgainstCountry = async () => {
+        if (!getProfile || getProfile.length === 0) {
+            setAllProfile([])
+            return
+        }
         const newArray = await getProfile.filter(item => item.nacionalidad == country)
         setAllProfile(newArray)
     }
@@ -85,7 +89,7 @@ export default function Nacionalidad(props) {
                             ))}
                         </ScrollView>
                     )}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center' }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center', marginBottom: 30 }}>
                     <TouchableOpacity
                         onPress={() => {
                             if (country != '') {

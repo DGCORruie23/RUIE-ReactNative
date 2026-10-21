@@ -1,26 +1,45 @@
-import { StyleSheet, Text, SafeAreaView, View, TextInput, TouchableOpacity, ScrollView, Dimensions } from 'react-native'
+import { StyleSheet, Text, SafeAreaView, View, TouchableOpacity, ScrollView, Dimensions } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import WrapperComponent from '../../../components/wrapperComponent'
 import { colors, fontFamily, fontPixel, hp, routes, wp } from '../../../services'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackButton from '../../../components/BackOption';
-import CountryDropDown from '../../../components/countryDropDown';
 import { useSelector } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
-import * as tab from '../';
 
 export default function Familia(props) {
     const getFamilyProfile = useSelector(state => state?.userData?.FamiliesProfileSave)
     const [allprofile, setAllProfile] = useState([])
 
-    const fetchFamilyProfiles = async () => {
-        const newArray = await getFamilyProfile.filter(i => i?.id == props?.route?.params?.item?.Id)
-        setAllProfile(newArray)
-    }
+    // Determinar el ID de la familia actual:
+    // Si venimos de un grupo existente en Captura, viene en route.params.item.Id.
+    // Si entramos desde el botón general "FAMILIA" para crear una nueva familia, asignamos el siguiente ID disponible una sola vez al montar la pantalla.
+    const [activeFamilyId, setActiveFamilyId] = useState(() => {
+        if (props?.route?.params?.item?.Id !== undefined) {
+            return props?.route?.params?.item?.Id;
+        }
+        return getFamilyProfile && getFamilyProfile.length > 0
+            ? Math.max(...getFamilyProfile.map(item => Number(item?.id) || 0)) + 1
+            : 0;
+    });
 
     useEffect(() => {
-        fetchFamilyProfiles()
-    }, [props?.route?.params?.item, getFamilyProfile])
+        if (props?.route?.params?.item?.Id !== undefined) {
+            setActiveFamilyId(props.route.params.item.Id);
+        }
+    }, [props?.route?.params?.item?.Id]);
+
+    const fetchFamilyProfiles = useCallback(() => {
+        if (!getFamilyProfile || getFamilyProfile.length === 0) {
+            setAllProfile([]);
+            return;
+        }
+        const filtered = getFamilyProfile.filter(i => i?.id == activeFamilyId);
+        setAllProfile(filtered);
+    }, [activeFamilyId, getFamilyProfile]);
+
+    useEffect(() => {
+        fetchFamilyProfiles();
+    }, [fetchFamilyProfiles]);
 
     function isDateMoreThan18YearsAgo(dateStr) {
         // Current date
@@ -45,17 +64,16 @@ export default function Familia(props) {
             <SafeAreaView style={styles.mainContainer}>
                 <BackButton />
 
-                <View style={{ flex: 1 }}>
+                <View style={{ marginBottom: hp(2), marginTop: hp(1) }}>
                     <Text style={styles.mainTitle}>{"Rescates de Familias"}</Text>
                 </View>
-                {allprofile &&
-                    allprofile.length > 0 && (
+                <View style={{ flex: 1 }}>
+                    {allprofile && allprofile.length > 0 ? (
                         <ScrollView contentContainerStyle={styles.listcontainer}>
                             {allprofile.map((item, index) => (
                                 <TouchableOpacity
                                     activeOpacity={0.8}
-                                    // onPress={()=> console.log(item?.FamiliaId)}
-                                    onPress={() => props.navigation.navigate(routes.profile, { key: 'Familia', id: props?.route?.params?.item?.Id, FamiliaId: item.FamiliaId, country: item?.nacionalidad, item: item })}
+                                    onPress={() => props.navigation.navigate(routes.profile, { key: 'Familia', id: activeFamilyId, FamiliaId: item.FamiliaId, country: item?.nacionalidad, item: item })}
                                     key={index}
                                     style={{ paddingVertical: hp(1), width: Dimensions.get('screen').width / 3, backgroundColor: isDateMoreThan18YearsAgo(item?.edad) ? colors.redishColor : 'green' }}>
                                     <View key={index} style={[styles.item]}>
@@ -67,9 +85,10 @@ export default function Familia(props) {
                                 </TouchableOpacity>
                             ))}
                         </ScrollView>
-                    )}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center' }}>
-                    <TouchableOpacity onPress={() => props.navigation.navigate(routes.profile, { key: 'Familia', id: props?.route?.params?.item?.Id })} style={[styles.container, { borderColor: colors.green }]}>
+                    ) : null}
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: 'center', marginBottom: 30 }}>
+                    <TouchableOpacity onPress={() => props.navigation.navigate(routes.profile, { key: 'Familia', id: activeFamilyId })} style={[styles.container, { borderColor: colors.green }]}>
                         <View style={[{ borderRadius: wp(5), backgroundColor: colors.green, padding: 6 }]}>
                             <MaterialCommunityIcons name="plus" size={30} color="#fff" />
                         </View>

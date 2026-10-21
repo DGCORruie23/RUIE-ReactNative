@@ -1,7 +1,7 @@
-import { StyleSheet, Text, SafeAreaView, View, Image, TextInput, TouchableOpacity, StatusBar, FlatList, ScrollView, Alert } from 'react-native'
+import { StyleSheet, Text, SafeAreaView, View, Image, TextInput, TouchableOpacity, StatusBar, FlatList, ScrollView, Alert, Modal } from 'react-native'
 import React, { useEffect } from 'react'
 import WrapperComponent from '../../../components/wrapperComponent'
-import { appIcons, colors, endPoints, fontFamily, fontPixel, hp, routes, wp } from '../../../services'
+import { appIcons, colors, endPoints, getEndPoints, fontFamily, fontPixel, hp, routes, wp } from '../../../services'
 import DropDown from '../../../components/dropDown'
 import { useDispatch, useSelector } from 'react-redux'
 import CustomDropDown from '../../../components/customDropDown'
@@ -25,6 +25,7 @@ export default function Captura(props) {
     { id: 5, nombre_pais: 'Hotel/A.V./C.S.', icon: <MaterialCommunityIcons name='office-building' color={colors.redishColor} size={25} /> },
     { id: 6, nombre_pais: 'Puestos a Disposicion', icon: <MaterialCommunityIcons name='shield-star-outline' color={colors.redishColor} size={25} /> },
     { id: 7, nombre_pais: 'Voluntarios', icon: <MaterialCommunityIcons name='human-male-male' color={colors.redishColor} size={25} /> },
+    { id: 8, nombre_pais: 'Caravana', icon: <MaterialCommunityIcons name='bus-multiple' color={colors.redishColor} size={25} /> },
   ]
 
   // Redux State 
@@ -36,8 +37,11 @@ export default function Captura(props) {
   const getProfile = useSelector(state => state?.userData?.profileSave)
   const getFamilyProfile = useSelector(state => state?.userData?.FamiliesProfileSave)
   const ResumenData = useSelector(state => state?.userData?.ResumenData)
+  const puestisADisposicion = useSelector(state => state.userData.puestisADisposicion)
   const InsertRData = useSelector(state => state.userData.InsertRData)
   const InsertCData = useSelector(state => state.userData.InsertCData)
+  const serverUrl = useSelector(state => state?.userData?.serverUrl)
+  const currentEndPoints = getEndPoints(serverUrl)
 
   // Common States 
   const [selected, setSelected] = React.useState(preDefinedArray[0])
@@ -47,6 +51,8 @@ export default function Captura(props) {
 
   const [modalVisible, setModalVisible] = React.useState(false);
   const [confirmModalVisible, setConfirmModalVisible] = React.useState(false);
+  const [caravanaModalVisible, setCaravanaModalVisible] = React.useState(false);
+  const [caravanaName, setCaravanaName] = React.useState('');
   const [iso3Counts, setIso3Counts] = React.useState([]);
   const [familyProfiles, fetchFamilyProfiles] = React.useState([]);
   const [isConnected, setIsConnected] = React.useState(false);
@@ -59,39 +65,54 @@ export default function Captura(props) {
   // Select Set Get Data Array
   const setListOfDropDown = async () => {
     var carreteroObjects = [];
-    if (selected.nombre_pais === 'Puestos a Disposicion') {
-      const fromFuerza = Fuerza.filter(
-        item =>
-          (item.tipoP.toLowerCase() === 'carretero' ||
-           item.tipoP.toLowerCase() === 'ferroviario' ||
-           item.tipoP.toLowerCase() === 'central de autobús') &&
-          item.oficinaR.toLowerCase() === uniqueOffices[user?.estado - 1].toLowerCase(),
-      ).map(item => ({
+    const userOffice = (uniqueOffices[user?.estado - 1] || '').toLowerCase();
+
+    if (selected.nombre_pais === 'Puestos a Disposicion' || selected.nombre_pais === 'Voluntarios') {
+      const fromFuerza = (Fuerza || []).filter(item => {
+        const tipo = (item?.tipoP || '').toLowerCase();
+        const oficina = (item?.oficinaR || '').toLowerCase();
+        return (
+          (tipo === 'carretero' ||
+           tipo === 'ferroviario' ||
+           tipo === 'central de autobús' ||
+           tipo === 'central de autobus' ||
+           tipo === 'aeropuerto') &&
+          oficina === userOffice
+        );
+      }).map(item => ({
         oficinaR: item.oficinaR,
         number: item.numPunto,
         suggestedName: item.nomPuntoRevision,
       }));
 
-      const fromAirports = airportTypes.filter(
+      const fromAirports = (airportTypes || []).filter(
         item =>
-          item.estadoPunto.toLowerCase() === uniqueOffices[user?.estado - 1].toLowerCase() &&
-          item.tipoPunto === 'AEREOS',
+          (item?.estadoPunto || '').toLowerCase() === userOffice &&
+          item?.tipoPunto === 'AEREOS',
       ).map(item => ({
         oficinaR: item.estadoPunto,
         number: 0,
         suggestedName: item.nombrePunto,
       }));
 
-      carreteroObjects = [...fromFuerza, ...fromAirports];
+      const combined = [...fromFuerza, ...fromAirports];
+      const seenNames = new Set();
+      carreteroObjects = combined.filter(item => {
+        const key = (item?.suggestedName || '').trim().toLowerCase();
+        if (!key || seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+      });
     } else if (
       selected.nombre_pais === 'Carretero' ||
+      selected.nombre_pais === 'Caravana' ||
       selected.nombre_pais === 'Ferroviario' ||
       selected.nombre_pais === 'Central de autobús'
     ) {
       // Filter items based on conditions
       carreteroObjects = await Fuerza.filter(
         item =>
-          item.tipoP.toLowerCase() === selected.nombre_pais.toLowerCase() &&
+          item.tipoP.toLowerCase() === (selected.nombre_pais === 'Caravana' ? 'carretero' : selected.nombre_pais.toLowerCase()) &&
           item.oficinaR.toLowerCase() === uniqueOffices[user?.estado - 1].toLowerCase(),
       ).map(item => ({
         // Map through filtered results and return an object with only the four specified properties
@@ -131,14 +152,14 @@ export default function Captura(props) {
       // Show popUp
       if (selected.nombre_pais == 'Puestos a Disposicion') {
         setModalVisible(true);
+        setListOfDropDown();
+      } else if (selected.nombre_pais == 'Caravana') {
+        setCaravanaModalVisible(true);
+        setCaravanaName(''); // Reset name when selecting caravana
+        setListOfDropDown();
       } else {
-        // Nothing to Get!
-        if (selected.nombre_pais == 'Voluntarios') {
-          console.log('Nothing to Get!');
-        } else {
-          // Custom DropDown Suggestion List
-          setListOfDropDown();
-        }
+        // Custom DropDown Suggestion List
+        setListOfDropDown();
       }
       setSelectedValue("")
     }
@@ -160,11 +181,15 @@ export default function Captura(props) {
   };
 
   useEffect(() => {
-    getProfile && getProfileData();
+    if (getProfile && getProfile.length > 0) {
+      getProfileData();
+    } else {
+      setIso3Counts([]);
+    }
   }, [getProfile]);
 
   useEffect(() => {
-    if (getFamilyProfile) {
+    if (getFamilyProfile && getFamilyProfile.length > 0) {
       const idCounts = {};
 
       getFamilyProfile.forEach(item => {
@@ -182,16 +207,61 @@ export default function Captura(props) {
 
       const newArray = Object.values(idCounts);
       fetchFamilyProfiles(newArray);
+    } else {
+      fetchFamilyProfiles([]);
     }
   }, [getFamilyProfile]);
 
+  const applyRescueTypeFields = (record, dropDownSelected, customeInputSelection, currentCaravanaName, currentPuestos) => ({
+    ...record,
+    aeropuerto: dropDownSelected == 'Aeropuerto' ? true : false,
+    carretero: (dropDownSelected == 'Carretero' || dropDownSelected == 'Caravana') ? true : false,
+    numeroEcono: dropDownSelected == 'Caravana' ? (currentCaravanaName || "").substring(0, 49) : "",
+    vehiculoAseg: dropDownSelected == 'Caravana' ? true : false,
+    casaSeguridad: dropDownSelected == 'Disuadidos' ? true : false,
+    centralAutobus: dropDownSelected == 'Central de autobús' ? true : false,
+    ferrocarril: dropDownSelected == 'Ferroviario' ? true : false,
+    hotel: dropDownSelected == 'Hotel/A.V./C.S.' ? true : false,
+    puestosADispo: dropDownSelected == 'Puestos a Disposicion' ? true : false,
+    juezCalif: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Juez Calificador')[0]?.status || false) : false,
+    reclusorio: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Reclusorio / Cereso')[0]?.status || false) : false,
+    policiaFede: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Policia Federal')[0]?.status || false) : false,
+    dif: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'DIF')[0]?.status || false) : false,
+    policiaEsta: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Policia Estatal')[0]?.status || false) : false,
+    policiaMuni: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Policia Municipal')[0]?.status || false) : false,
+    guardiaNaci: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Guardia Nacional')[0]?.status || false) : false,
+    fiscalia: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Fiscalia')[0]?.status || false) : false,
+    otrasAuto: dropDownSelected == 'Puestos a Disposicion' ? (currentPuestos?.filter(item => item.id == 'Otras autoridades')[0]?.status || false) : false,
+    voluntarios: dropDownSelected == 'Voluntarios' ? true : false,
+    municipio: dropDownSelected == 'Hotel/A.V./C.S.' ? (customeInputSelection || "") : "",
+    puntoEstra: (
+      dropDownSelected == 'Aeropuerto' ||
+      dropDownSelected == 'Central de autobús' ||
+      dropDownSelected == 'Carretero' ||
+      dropDownSelected == 'Ferroviario' ||
+      dropDownSelected == 'Puestos a Disposicion' ||
+      dropDownSelected == 'Voluntarios' ||
+      dropDownSelected == 'Caravana'
+    ) ? (customeInputSelection || "") : "",
+  });
+
   const confirmData = async () => {
     if (isSubmitting) return;
+
+    const hasProfiles = getProfile && getProfile.length > 0;
+    const hasFamilyProfiles = getFamilyProfile && getFamilyProfile.length > 0;
+
+    if (!hasProfiles && !hasFamilyProfiles) {
+      setConfirmModalVisible(false);
+      Alert.alert('Sin rescates por enviar');
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Conditional check added before reduce
     const grouped =
-      getProfile && getProfile.length > 0
+      hasProfiles
         ? getProfile.reduce((acc, item) => {
           acc[item.nacionalidad] = [...(acc[item.nacionalidad] || []), item];
           return acc;
@@ -200,7 +270,7 @@ export default function Captura(props) {
 
     // Corrected conditional check for groupedFamilies and added check before reduce
     const groupedFamilies =
-      getFamilyProfile && getFamilyProfile.length > 0
+      hasFamilyProfiles
         ? getFamilyProfile.reduce((acc, item) => {
           acc[item.id] = [...(acc[item.id] || []), item];
           return acc;
@@ -218,26 +288,29 @@ export default function Captura(props) {
     // Calculate totals
     const totalProfiles = await calculateTotalObjects(grouped);
     const totalFamilyProfiles = await calculateTotalObjects(groupedFamilies);
+    const totalRescues = parseFloat(totalProfiles) + parseFloat(totalFamilyProfiles);
 
-    var Data = {
-      mainTopTitle: `OR: ${uniqueOffices[user?.estado - 1]}`,
-      FetchDate: moment(new Date()).format('DD-MM-YYYY'),
-      Total_Number: parseFloat(totalProfiles) + parseFloat(totalFamilyProfiles),
-      dropDownTitle: `${selected?.nombre_pais?.toUpperCase()}${(selected.nombre_pais !== 'Voluntarios') ? (selectedValue != '' ? ':' + selectedValue : ':' + dropDownListOfFuerza[0]?.suggestedName) : ''}`,
-      selectedValue:
-        selectedValue != ''
-          ? selectedValue
-          : dropDownListOfFuerza[0]?.suggestedName,
-      nationalityGroup: grouped,
-      nationalityGroupFamily: groupedFamilies,
-    };
+    if (totalRescues > 0) {
+      var Data = {
+        mainTopTitle: `OR: ${uniqueOffices[user?.estado - 1]}`,
+        FetchDate: moment(new Date()).format('DD-MM-YYYY'),
+        Total_Number: totalRescues,
+        dropDownTitle: `${selected?.nombre_pais?.toUpperCase()}${selectedValue != '' ? ':' + selectedValue : ':' + (dropDownListOfFuerza[0]?.suggestedName || '')}`,
+        selectedValue:
+          selectedValue != ''
+            ? selectedValue
+            : dropDownListOfFuerza[0]?.suggestedName,
+        nationalityGroup: grouped,
+        nationalityGroupFamily: groupedFamilies,
+      };
 
-    if (ResumenData != null) {
-      const newArray = [...ResumenData];
-      newArray.push(Data);
-      dispatch(SaveResumenData(newArray));
-    } else {
-      dispatch(SaveResumenData([Data]));
+      if (ResumenData != null) {
+        const newArray = [...ResumenData];
+        newArray.push(Data);
+        dispatch(SaveResumenData(newArray));
+      } else {
+        dispatch(SaveResumenData([Data]));
+      }
     }
 
     const state = await NetInfo.fetch();
@@ -270,15 +343,30 @@ export default function Captura(props) {
   };
 
   useEffect(() => {
-    if (selected && selectedValue) {
+    if (selected && selectedValue !== '') {
       const forwardData = {
         DropDownSelected: selected.nombre_pais,
         customeInputSelection: selectedValue,
+        caravanaName: selected.nombre_pais === 'Caravana' ? caravanaName : '',
       };
 
       dispatch(SaveForwardData(forwardData));
+
+      if (InsertRData && InsertRData.length > 0) {
+        const updatedInsertR = InsertRData.map(item =>
+          applyRescueTypeFields(item, forwardData.DropDownSelected, forwardData.customeInputSelection, forwardData.caravanaName, puestisADisposicion)
+        );
+        dispatch(SaveInsertRData(updatedInsertR));
+      }
+
+      if (InsertCData && InsertCData.length > 0) {
+        const updatedInsertC = InsertCData.map(item =>
+          applyRescueTypeFields(item, forwardData.DropDownSelected, forwardData.customeInputSelection, forwardData.caravanaName, puestisADisposicion)
+        );
+        dispatch(SaveInsertCData(updatedInsertC));
+      }
     }
-  }, [selected, selectedValue]);
+  }, [selected, selectedValue, caravanaName, puestisADisposicion]);
 
   // Keep connection state updated
   useEffect(() => {
@@ -293,7 +381,23 @@ export default function Captura(props) {
     var myHeaders = new Headers();
     myHeaders.append('Content-Type', 'application/json');
 
-    var raw = JSON.stringify(InsertRData);
+    const resolvedLocation = selectedValue != ''
+      ? selectedValue
+      : (dropDownListOfFuerza[0]?.suggestedName || '');
+
+    const payload = InsertRData.map(item => {
+      const updated = applyRescueTypeFields(
+        item,
+        selected?.nombre_pais,
+        resolvedLocation,
+        selected?.nombre_pais === 'Caravana' ? caravanaName : '',
+        puestisADisposicion
+      );
+      const { recordId, ...rest } = updated;
+      return rest;
+    });
+
+    var raw = JSON.stringify(payload);
 
     var requestOptions = {
       method: 'POST',
@@ -303,7 +407,7 @@ export default function Captura(props) {
     };
 
     try {
-      const response = await fetch(`${endPoints.InsertR}`, requestOptions);
+      const response = await fetch(`${currentEndPoints.InsertR}`, requestOptions);
       const result = await response.json();
       console.log('PostInsertRData result: ', result);
       if (result?.guardado == 'ok') {
@@ -332,7 +436,7 @@ export default function Captura(props) {
     };
 
     try {
-      const response = await fetch(`${endPoints.InsertC}`, requestOptions);
+      const response = await fetch(`${currentEndPoints.InsertC}`, requestOptions);
       const result = await response.json();
       console.log('PostInsertCData result: ', result);
       if (result?.guardado == 'ok') {
@@ -349,7 +453,7 @@ export default function Captura(props) {
   return (
     <WrapperComponent background={colors.white}>
       <SafeAreaView style={styles.mainContainer}>
-        <ScrollView bounces={false}>
+        <ScrollView bounces={false} nestedScrollEnabled={true} keyboardShouldPersistTaps="handled">
           <View
             style={{
               backgroundColor: colors.redishColor,
@@ -416,9 +520,7 @@ export default function Captura(props) {
           <View style={{ marginTop: wp(2), zIndex: 1 }}>
             <Text style={{ textAlign: 'center', fontSize: fontPixel(14), color: colors.black, fontFamily: fontFamily.appTextMedium }}>TIPO DE RESCATE</Text>
             <DropDown dataArray={preDefinedArray} maintitle='captura' onSelect={(e) => [setSelected(e), setTypeValue(''), setSelectedValue('')]} selected={selected} placeholder={'please select'} />
-            {
-              (selected.nombre_pais !== 'Voluntarios') && <CustomDropDown dataArray={dropDownListOfFuerza} onTypeValue={(e) => setTypeValue(e)} onSelect={(e) => setSelectedValue(e)} selected={typeValue} />
-            }
+            <CustomDropDown dataArray={dropDownListOfFuerza} onTypeValue={(e) => setTypeValue(e)} onSelect={(e) => setSelectedValue(e)} selected={typeValue} />
             <View style={{ marginTop: wp(10), zIndex: -1 }}>
               <Text style={{ fontSize: fontPixel(18), color: '#7A7A7A', fontFamily: fontFamily.appTextMedium, textAlign: 'center' }}>
                 Adultos y NNA No Acompanados
@@ -473,11 +575,7 @@ export default function Captura(props) {
                 if (selectedValue != '') {
                   props.navigation.navigate(routes.nacionalidad);
                 } else {
-                  if (selected.nombre_pais == 'Voluntarios') {
-                    props.navigation.navigate(routes.nacionalidad)
-                  } else {
-                    Alert.alert('LLENAR PARA CONTINUAR')
-                  }
+                  Alert.alert('LLENAR PARA CONTINUAR')
                 }
               }}
               style={[styles.container, { zIndex: -1, borderRadius: wp(5), borderColor: colors.brownColor, width: wp(60), }]}>
@@ -561,11 +659,7 @@ export default function Captura(props) {
                 if (selectedValue != '') {
                   props.navigation.navigate(routes.Familia);
                 } else {
-                  if (selected.nombre_pais == 'Voluntarios') {
-                    props.navigation.navigate(routes.Familia)
-                  } else {
-                    Alert.alert('LLENAR PARA CONTINUAR')
-                  }
+                  Alert.alert('LLENAR PARA CONTINUAR')
                 }
               }}
               style={[styles.container, { zIndex: -1, borderRadius: wp(5), borderColor: colors.green, width: wp(40), }]}>
@@ -586,14 +680,17 @@ export default function Captura(props) {
           </View>
 
           <TouchableOpacity onPress={() => {
+            const hasProfiles = getProfile && getProfile.length > 0;
+            const hasFamilyProfiles = getFamilyProfile && getFamilyProfile.length > 0;
+
             if (selectedValue != '') {
-              setConfirmModalVisible(!confirmModalVisible)
-            } else {
-              if (selected.nombre_pais == 'Voluntarios') {
-                setConfirmModalVisible(!confirmModalVisible)
-              } else {
-                Alert.alert('LLENAR PARA CONTINUAR')
+              if (!hasProfiles && !hasFamilyProfiles) {
+                Alert.alert('Sin rescates por enviar');
+                return;
               }
+              setConfirmModalVisible(!confirmModalVisible);
+            } else {
+              Alert.alert('LLENAR PARA CONTINUAR');
             }
           }}
             style={[styles.container, { zIndex: -1, right: 5, borderRadius: wp(3), bottom: 0, alignSelf: "flex-end", borderColor: colors.redishColor, width: wp(40), }]}>
@@ -616,6 +713,42 @@ export default function Captura(props) {
           onSave={() => confirmData()}
           isSubmitting={isSubmitting}
         />
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={caravanaModalVisible}
+          onRequestClose={() => setCaravanaModalVisible(false)}
+        >
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+            <View style={{ backgroundColor: colors.redishColor, padding: 20, width: '80%', borderRadius: 10 }}>
+              <Text style={{ fontSize: fontPixel(20), fontFamily: fontFamily.appTextSemiBold, color: colors.brownishColor, textAlign: 'center', marginBottom: 15 }}>
+                Nombre de la Caravana
+              </Text>
+              <TextInput
+                style={{ backgroundColor: colors.white, padding: 10, borderRadius: 5, color: colors.black, fontFamily: fontFamily.appTextMedium, marginBottom: 15 }}
+                placeholder="Escribe el nombre aquí..."
+                placeholderTextColor={colors.grey_Text}
+                maxLength={49}
+                value={caravanaName}
+                onChangeText={(text) => setCaravanaName(text)}
+              />
+              <TouchableOpacity
+                style={{ backgroundColor: colors.brownishColor, padding: 12, borderRadius: 5, alignItems: 'center' }}
+                onPress={() => {
+                  if (caravanaName.trim() === '') {
+                    Alert.alert('Error', 'Por favor ingresa un nombre para la caravana.');
+                  } else {
+                    setCaravanaModalVisible(false);
+                  }
+                }}
+              >
+                <Text style={{ color: colors.redishColor, fontFamily: fontFamily.appTextBold, fontSize: fontPixel(14) }}>
+                  Aceptar
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </WrapperComponent >
   );

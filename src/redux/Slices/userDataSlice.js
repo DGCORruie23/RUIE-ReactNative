@@ -14,6 +14,8 @@ const initialState = {
   forwardData: {},
   InsertRData: null,
   InsertCData: null,
+  serverUrl: 'https://ruie2025.dgcor.com',
+  serverUrlCheckedAt: null,
 };
 
 export const userDataSlice = createSlice({
@@ -59,6 +61,10 @@ export const userDataSlice = createSlice({
     SaveInsertCData: (state, action) => {
       state.InsertCData = action.payload;
     },
+    SaveServerUrl: (state, action) => {
+      state.serverUrl = action.payload.url;
+      state.serverUrlCheckedAt = action.payload.checkedAt;
+    },
   },
 });
 
@@ -76,6 +82,7 @@ export const {
   SaveForwardData,
   SaveInsertRData,
   SaveInsertCData,
+  SaveServerUrl,
 } = userDataSlice.actions;
 
 export default userDataSlice.reducer;

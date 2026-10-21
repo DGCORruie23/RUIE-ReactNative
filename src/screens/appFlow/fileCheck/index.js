@@ -1,7 +1,7 @@
 import { StyleSheet, Text, SafeAreaView, View, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native'
 import React from 'react'
 import WrapperComponent from '../../../components/wrapperComponent'
-import { colors, fontFamily, fontPixel, hp, routes, wp, endPoints } from '../../../services'
+import { colors, fontFamily, fontPixel, hp, routes, wp, endPoints, getEndPoints } from '../../../services'
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import BackButton from '../../../components/BackOption';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,6 +17,8 @@ export default function FileCheck(props) {
     const user = useSelector(state => state.userData.userData)
     const ResumenData = useSelector(state => state?.userData?.ResumenData)
     const InsertCData = useSelector(state => state.userData.InsertCData)
+    const serverUrl = useSelector(state => state?.userData?.serverUrl)
+    const currentEndPoints = getEndPoints(serverUrl)
     const [isSubmitting, setIsSubmitting] = React.useState(false);
 
 
@@ -128,7 +130,7 @@ export default function FileCheck(props) {
                 };
 
                 try {
-                    const response = await fetch(`${endPoints.InsertC}`, requestOptions);
+                    const response = await fetch(`${currentEndPoints.InsertC}`, requestOptions);
                     const result = await response.json();
                     if (result?.guardado == 'ok') {
                         dispatch(SaveInsertCData(null));

@@ -2,15 +2,23 @@ import { Dimensions, PixelRatio } from 'react-native';
 
 const BASE_URL = 'https://ruie2025.dgcor.com';
 
-export const endPoints = {
-    signIn: BASE_URL + '/login/validar/',
-    airportTypes: BASE_URL + '/info/PuntosI',
-    Municipios: BASE_URL + '/info/Municipios',
-    Fuerza: BASE_URL + '/info/Fuerza',
-    Paises: BASE_URL + '/info/Paises',
-    InsertR: BASE_URL + '/registro/insertR',
-    InsertC: BASE_URL + '/registro/insertC',
-}
+// URL fija para obtener la configuración dinámica del servidor
+export const VALIDATION_URL = 'https://ruie.inami.gob.mx/info/validacionL';
+export const FALLBACK_BASE_URL = BASE_URL;
+
+// Función dinámica — recibe la URL guardada en Redux
+export const getEndPoints = (baseUrl = BASE_URL) => ({
+  signIn:       baseUrl + '/login/validar/',
+  airportTypes: baseUrl + '/info/PuntosI',
+  Municipios:   baseUrl + '/info/Municipios',
+  Fuerza:       baseUrl + '/info/Fuerza',
+  Paises:       baseUrl + '/info/Paises',
+  InsertR:      baseUrl + '/registro/insertR',
+  InsertC:      baseUrl + '/registro/insertC',
+});
+
+// Compatibilidad con código existente que importa endPoints directamente
+export const endPoints = getEndPoints(BASE_URL);
 
 export const storageKey = {
     user: 'user',
